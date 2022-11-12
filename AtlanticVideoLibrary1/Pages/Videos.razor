@@ -1,0 +1,111 @@
+﻿@page "/videos"
+<h3>Video Management</h3>
+@inject AtlanticVideoLibrary1.Data.IVideoService VideoService
+@inject NavigationManager NavigationManager;
+
+<EditForm Model="@video" Context="formContext">
+    <div class="form-group">
+        <label>Id</label>
+        <InputText id="id" class="form-control" name="id"  @bind-Value="@video.id" readonly/>
+    </div>
+    <div class="form-group">
+        <label>Name</label>
+        <InputText id="name" class="form-control" name="name" @bind-Value="@video.name" />
+    </div>
+    
+    <div class="form-group">
+        <label>Author</label>
+        <InputText id="author" class="form-control" name="author" @bind-Value="@video.author" />
+    </div>
+    <div class="form-group">
+        <MudDatePicker Label="Date Of Creation" @bind-Date="@date" />
+    </div>
+    <br />
+    <button class="btn btn-primary" @onclick="Add"> Add This Video</button>
+    
+    <MudAlert Severity="@level">@message</MudAlert>
+    <hr />
+    <div class="input-group mb-3">
+        <InputText @bind-Value="@searchValue" class="form-control" placeholder="Search Video Details" />
+        <div class="input-group-append">
+            <button class="btn btn-primary" @onclick="Search" >Search</button>
+        </div>
+    </div>
+</EditForm>
+
+<table class="table">
+    <thead><tr>
+        <td>Id</td>
+        <td>Name</td>
+        <td>Date Of Creation</td>
+        <td>Author</td>
+        <td>Lending status</td>
+    </tr></thead>
+    <tbody>
+        @foreach (var video in videos)
+        {
+        <tr>
+            <td>@video.id</td>
+            <td>@video.name</td>
+            <td>@video.dateOfCreation</td>
+            <td>@video.author</td>
+            <td>
+            @if (video.lendingId!=null)
+            {
+                        <a href="lendingdetails/@video.lendingId">Lent</a>
+                    }
+                    else
+                    {
+                        <lable>Available</lable>
+                    }
+                </td>
+            <td><a href="video/@video.id">Edit</a></td>
+        </tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    private List<AtlanticVideoLibrary1.Data.Video> videos;
+    private MudBlazor.Severity level { get; set; } = MudBlazor.Severity.Normal;
+    private string message { get; set; } = "";
+    private AtlanticVideoLibrary1.Data.Video video = new AtlanticVideoLibrary1.Data.Video();
+    private String searchValue="";
+    private DateTime? date = DateTime.Today;
+    protected override void OnInitialized()
+    {
+        videos = VideoService.GetVideos();
+        video.id = VideoService.GenerateId();
+    }
+    public void Search()
+    {
+        videos = VideoService.Search(searchValue);
+    }
+    public void Add()
+    {
+        video.dateOfCreation=date.ToString();
+        if (video.id == "")
+        {
+            level = Severity.Error;
+            message = "Please enter an id";
+            return;
+        }
+        bool status = VideoService.Add(video);
+        if (status)
+        {
+            level = MudBlazor.Severity.Success;
+            message = "Video added";
+            video.id = VideoService.GenerateId();
+            video.name = "";
+            video.author = "";
+            date = DateTime.Today;
+            videos = VideoService.GetVideos();
+        }
+        else
+        {
+            level = MudBlazor.Severity.Error;
+            message = "Failed to Add Video ";
+        }
+    }
+}
+

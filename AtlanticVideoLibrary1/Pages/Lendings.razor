@@ -1,0 +1,93 @@
+﻿@page "/lendings"
+<h3>Lendings Management</h3>
+@inject AtlanticVideoLibrary1.Data.ILendingService _lendingService;
+@inject AtlanticVideoLibrary1.Data.IVideoService _videoService;
+@inject NavigationManager _navigationManager;
+
+<EditForm Model="@lending" Context="formContext">
+    <div class="form-group">
+        <label>Member Id</label>
+        <InputNumber type="numeric" id="contact" class="form-control" name="memberId" @bind-Value="memberId" />
+    </div>
+    <div class="form-group">
+        <MudDatePicker Label="Borrowed date" @bind-Date="@borrowedDate" />
+    </div>
+    <div class="form-group">
+        <MudDatePicker Label="Return date" @bind-Date="@returnDate" />
+    </div>
+    <div>
+        <label>Video Id</label>
+        <div class="input-group mb-3">
+            <InputText @bind-Value="@videoSearchValue" class="form-control" />
+            <div class="input-group-append">
+                <button class="btn btn-primary" @onclick="SearchVideo">Add Video</button>
+            </div>
+        </div>
+    </div>
+    <MudAlert Severity="@videoLevel">@videoMessage</MudAlert>
+    <br/>
+    <table class="table">
+        <thead>
+            <tr>
+                <td>Id</td>
+                <td>Name</td>
+                <td>Date Of Creation</td>
+                <td>Author</td>
+            </tr>
+        </thead>
+        
+            <tbody>
+                @foreach(Data.Video video in videos){
+                <tr>
+                    <td>@video.id</td>
+                    <td>@video.name</td>
+                    <td>@video.dateOfCreation</td>
+                    <td>@video.author</td>
+                    <td><MudButton @onclick="()=>RemoveFromList(video)">Remove</MudButton></td>
+                </tr>
+                }
+            
+        </tbody>
+    </table>
+    <button class="btn btn-primary" @onclick="Add"> Add This Lending</button>
+    <MudAlert Severity="@level">@message</MudAlert>
+    <div class="input-group mb-3">
+        <InputText @bind-Value="@lendingSearchValue" class="form-control" placeholder="Search  Details" />
+        <div class="input-group-append">
+            <button class="btn btn-primary" @onclick="SearchLendings">Search</button>
+        </div>
+    </div>
+</EditForm>
+    <hr />
+
+    
+
+
+<table class="table">
+    <thead>
+        <tr>
+            <td>Id</td>
+            <td>Member Id</td>
+            <td>Borrowed Date</td>
+            <td>Return Date</td>
+            <td></td>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var lending in lendings)
+        {
+            <tr>
+                <td>@lending.id</td>
+                <td><a href="member/@lending.memberId">@lending.memberId</a></td>
+                <td>@lending.borrowedDate</td>
+                <td>@lending.returnDate</td>
+                <td><a href="lendingdetails/@lending.id">Videos</a></td>
+                <td><a href="lending/@lending.id">Edit</a></td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@code {
+   
+}

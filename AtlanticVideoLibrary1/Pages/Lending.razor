@@ -1,0 +1,86 @@
+﻿@page "/lending/{id}"
+<h3>Lending</h3>
+@inject AtlanticVideoLibrary1.Data.ILendingService _lendingService
+@inject NavigationManager _navigationManager;
+
+<EditForm Model="@lending" Context="formContext">
+    <div class="form-group">
+        <label>Id</label>
+        <InputText id="id" class="form-control" name="id" @bind-Value="@lending.id" readonly/>
+    </div>
+    <div class="form-group">
+        <label>Member Id</label>
+        <InputNumber type="numeric" id="contact" class="form-control" name="memberId" @bind-Value="memberId" />
+    </div>
+    <div class="form-group">
+        <MudDatePicker Label="Borrowed date" @bind-Date="@borrowedDate" />
+    </div>
+    <div class="form-group">
+        <MudDatePicker Label="Return date" @bind-Date="@returnDate" />
+    </div>
+    
+    
+    <button type="submit" class="btn btn-primary" @onclick="@(() => Update())">Update</button>
+    <button type="submit" class="btn btn-primary" @onclick="@(() => Delete())">Delete</button>
+    <button type="submit" class="btn btn-primary" @onclick="@(() => Back())">Back</button>
+    <button type="submit" class="btn btn-primary" @onclick="@(() => Videos())">Videos in this lending</button>
+    <MudAlert Severity="@level">@message</MudAlert>
+</EditForm>
+
+@code {
+    [Parameter]
+    public string id { get; set; }
+    private Data.Lending lending=new Data.Lending();
+    private String message="";
+    private MudBlazor.Severity level = MudBlazor.Severity.Normal;
+    private decimal memberId = 0;
+    private DateTime? borrowedDate = DateTime.Today;
+    private DateTime? returnDate = DateTime.Today;
+    protected override void OnInitialized()
+    {
+        lending=_lendingService.GetLending(id);
+        memberId = decimal.Parse(lending.memberId);
+        borrowedDate = DateTime.Parse(lending.borrowedDate);
+        returnDate = DateTime.Parse(lending.returnDate);
+    }
+
+    private void Back()
+    {
+        _navigationManager.NavigateTo("/lendings");
+    }
+    private void Videos()
+    {
+        _navigationManager.NavigateTo($"/lendingdetails/{id}");
+    }
+    private void Update()
+    {
+        lending.memberId = "" + memberId;
+        lending.borrowedDate = "" + borrowedDate;
+        lending.returnDate = "" + returnDate;
+        bool stat = _lendingService.Update(lending);
+        if (stat)
+        {
+            message = "Updated Successfully";
+            level = MudBlazor.Severity.Success;
+        }
+        else
+        {
+            message = "Failed to Update";
+            level = MudBlazor.Severity.Error;
+        }
+    }
+    private void Delete()
+    {
+        bool stat = _lendingService.Delete(id);
+        if (stat)
+        {
+            message = "Deleted Lending Details";
+            level = MudBlazor.Severity.Success;
+        }
+        else
+        {
+            message = "Failed to Delete";
+            level = MudBlazor.Severity.Error;
+        }
+    }
+}

@@ -1,0 +1,103 @@
+﻿@page "/members"
+<h3>Member Management </h3>
+@inject AtlanticVideoLibrary1.Data.IMemberService MemberService
+@inject NavigationManager NavigationManager;
+
+<EditForm Model="@member" Context="formContext">
+    <div class="form-group">
+        <label>Id</label>
+        <InputText id="id" class="form-control" name="id"  @bind-Value="@member.id" readonly/>
+    </div>
+    <div class="form-group">
+        <label>Name</label>
+        <InputText id="name" class="form-control" name="name" @bind-Value="@member.name" />
+    </div>
+    <div class="form-group">
+        <label>Address</label>
+        <InputText id="address" class="form-control" name="address" @bind-Value="@member.address" />
+    </div>
+    <div class="form-group">
+        <label>Contact</label>
+        <InputNumber type="numeric" id="contact" class="form-control" name="contact" @bind-Value="contact" />
+    </div>
+    <div class="form-group">
+        <MudDatePicker Label="Date Of Registration" @bind-Date="@date" />
+    </div>
+    <br />
+    <button class="btn btn-primary" @onclick="Add"> Add This Member</button>
+    
+    <MudAlert Severity="@level">@message</MudAlert>
+    <hr />
+    <div class="input-group mb-3">
+        <InputText @bind-Value="@searchValue" class="form-control" placeholder="Search Member Details" />
+        <div class="input-group-append">
+            <button class="btn btn-primary" @onclick="Search" >Search</button>
+        </div>
+    </div>
+</EditForm>
+
+
+<table class="table">
+    <thead><tr>
+        <td>Id</td>
+        <td>Name</td>
+        <td>Address</td>
+        <td>Contact</td>
+        <td>Date of Registration</td>
+    </tr></thead>
+    <tbody>
+        @foreach (var member in members)
+        {
+        <tr>
+            <td>@member.id</td>
+            <td>@member.name</td>
+            <td>@member.address</td>
+            <td>@member.contact</td>
+            <td>@member.dateOfRegistration</td>
+            <td><a href="member/@member.id">Edit</a></td>
+        </tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    private List<AtlanticVideoLibrary1.Data.Member> members;
+    private MudBlazor.Severity level { get; set; } = Severity.Normal;
+    private string message { get; set; } = "";
+    private Data.Member member=new Data.Member();
+    private String searchValue="";
+    private decimal contact=0;
+    private DateTime? date = DateTime.Today;
+    protected override void OnInitialized()
+    {
+        members = MemberService.GetMembers();
+        member.id=MemberService.GenerateId();
+    }
+    public void Search()
+    {
+        members = MemberService.Search(searchValue);
+    }
+    public void Add()
+    {
+        member.dateOfRegistration = date.ToString();
+        member.contact = ""+contact;
+        if (member.id == "")
+        {
+            level = Severity.Error;
+            message = "Please enter an id";
+            return;
+        }
+        bool status =MemberService.Add(member);
+        if (status)
+        {
+            level = Severity.Success;
+            message = "Member added";
+            members = MemberService.GetMembers();
+        }
+        else
+        {
+            level = Severity.Error;
+            message = "Failed to Add member ";
+        }
+    }
+}

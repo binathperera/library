@@ -1,0 +1,112 @@
+﻿@page "/member/{id}"
+@inject AtlanticVideoLibrary1.Data.IMemberService MemberService;
+@inject NavigationManager NavigationManager;
+
+<h3>Member</h3>
+@try
+{
+    <EditForm Model="@member" Context="formContext">
+        <div>
+            <label>Id</label>
+            <InputText @bind-Value="@member.id"  id="id" class="form-control" name="id" readonly/>
+        </div>
+        <div>
+            <label>Name</label>
+            <InputText @bind-Value="@member.name"  id="name" class="form-control" name="name" />
+        </div>
+        <div>
+            <label>Address</label>
+            <InputText @bind-Value="@member.address" id="address" class="form-control" name="address" />
+        </div>
+        <div class="form-group">
+            <label>Contact</label>
+            <InputNumber type="numeric" id="contact" class="form-control" name="contact" @bind-Value="contact" />
+        </div>
+        <div class="form-group">
+            <MudDatePicker Label="Date Of Registration" @bind-Date="@date" />
+        </div>
+        <br/>
+        <button type="submit" class="btn btn-primary" @onclick="@(() => Update())">Update</button>
+        <button type="submit" class="btn btn-primary" @onclick="@(() => Delete())">Delete</button>
+        <button type="submit" class="btn btn-primary" @onclick="@(() => Back())">Back to all members</button>
+    </EditForm>
+    <MudAlert Severity="@level">@message</MudAlert>
+}catch(Exception e)
+{
+    Console.WriteLine(e); //
+}
+@code {
+    [Parameter]
+    public string id{ get; set; }
+    private int contact = 0;
+    private DateTime? date = DateTime.Today;
+    private MudBlazor.Severity level { get; set; } = Severity.Normal;
+    private string message { get; set; } = "";
+
+    private Data.Member member = new Data.Member();
+
+    protected override void OnInitialized()
+    {
+        member=MemberService.GetMember(id);
+        contact = int.Parse(member.contact);
+        date = DateTime.Parse(member.dateOfRegistration);
+    }
+    public void Update(){
+        member.dateOfRegistration = date.ToString();
+        member.contact = "" + contact;
+        if (id != member.id)
+        {
+            bool status = MemberService.Delete(id);
+            if(status){
+                status=MemberService.Add(member);
+                if (status)
+                {
+                    level = Severity.Success;
+                    message="Successfully Updated Member Details";
+                }
+                else
+                {
+                    level = Severity.Error;
+                    message = "Failed to Update Member Details";
+                }
+            }
+            else
+            {
+                level = Severity.Error;
+                message = "Failed to Update Member Details";
+            }
+        }
+        else
+        {
+            bool status = MemberService.Update(member);
+            if (status)
+            {
+                level = Severity.Success;
+                message = "Successfully Updated Member Details";
+            }
+            else
+            {
+                level = Severity.Error;
+                message = "Failed to Update Member Details";
+            }
+        }
+    }
+    public void Delete()
+    {
+        bool status = MemberService.Delete(id);
+        if (status)
+        {
+            level = Severity.Success;
+            message = "Successfully Removed Member Details";
+        }
+        else
+        {
+            level = Severity.Error;
+            message = "Failed to Delete Member ";
+        }
+    }
+    public void Back()
+    {
+        NavigationManager.NavigateTo("/members");
+    }
+}

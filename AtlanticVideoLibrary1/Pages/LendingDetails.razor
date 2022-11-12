@@ -1,0 +1,143 @@
+﻿@page "/lendingdetails/{id}"
+@inject AtlanticVideoLibrary1.Data.ILendingService _lendingService;
+@inject NavigationManager _navigationManager;
+<h3>Videos (Lending id @id)</h3>
+<EditForm Model="@lendingDetails" Context="formContext">
+    <div>
+        <label>Video Id</label>
+        <div class="input-group mb-3">
+            <InputText @bind-Value="@videoSearchValue" class="form-control" />
+            <div class="input-group-append">
+                <button class="btn btn-primary" @onclick="SearchVideo">Add Video</button>
+            </div>
+        </div>
+    </div>
+</EditForm>
+<MudAlert Severity="@videoLevel">@videoMessage</MudAlert>
+<table class="table">
+    <thead>
+        <tr>
+            <td>Id</td>
+            <td>Name</td>
+            <td>Date Of Creation</td>
+            <td>Author</td>
+            <td>Is returned</td>
+            <td></td>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var video in lendingDetails.videos)
+        {
+            <tr>
+                <td>@video.id</td>
+                <td>@video.name</td>
+                <td>@video.dateOfCreation</td>
+                <td>@video.author</td>
+                <td><input type="checkbox" @bind ="video.isReturned" Color="Color.Primary" /></td>
+                <td><button @onclick="()=>CheckBox(video)" >Update</button></td>
+                <td><button @onclick="()=>RemoveFromList(video)">Remove</button></td>
+            </tr>
+        }
+    </tbody>
+</table>
+<MudAlert Severity="@level">@message</MudAlert>
+<button class="btn btn-primary" @onclick="Edit">Edit Other Details</button>
+<button type="submit" class="btn btn-primary" @onclick="@(() => Back())">Back</button>
+@code {
+    [Parameter]
+    public string id { get; set; }
+    private MudBlazor.Severity level { get; set; } = MudBlazor.Severity.Normal;
+    private string message { get; set; } = "";
+    private String videoSearchValue="";
+    private String videoMessage="";
+    private Data.Video video;
+    private MudBlazor.Severity videoLevel=MudBlazor.Severity.Normal;
+
+    
+
+    private void CheckBox(Data.Video v)
+    {
+        int stat;
+        if (v.isReturned)
+        {
+            stat=_lendingService.SetReturnStatus(id,v.id,true);  
+        }
+        else
+        {
+            stat=_lendingService.SetReturnStatus(id,v.id,false);
+        }
+        if (stat == 0)
+        {
+            level = MudBlazor.Severity.Success;
+            message = "Successfully updated";
+
+        }
+        else if(stat == 1)
+        {
+            level = MudBlazor.Severity.Error;
+            message = "Some system error";
+        }
+        else if (stat == 2)
+        {
+            level = MudBlazor.Severity.Error;
+            message = "Video borrowed by someone else";
+        }
+        OnInitialized();
+    }
+    private Data.LendingDetails lendingDetails=new Data.LendingDetails();
+    protected override void OnInitialized()
+    {
+        lendingDetails = _lendingService.GetLendingDetails(id);
+        foreach (Data.Video video in lendingDetails.videos)
+        {
+            video.isReturned=_lendingService.GetReturnStatus(id,video.id);
+        }
+    }
+
+    private void Edit()
+    {
+        _navigationManager.NavigateTo($"/lending/{id}");
+    }
+    private void Back()
+    {
+        _navigationManager.NavigateTo($"/lendings");
+    }
+    public void RemoveFromList(Data.Video video)
+    {
+        if (lendingDetails.videos.Count==1) {
+            level = MudBlazor.Severity.Error;
+            message = "A lending needs to have at least one item";
+            return;
+        }
+        lendingDetails.videos.Remove(video);
+        _lendingService.DeleteVideo(id, video.id);
+        lendingDetails = _lendingService.GetLendingDetails(id);
+    }
+    public void SearchVideo()
+    {
+        foreach (Data.Video v in lendingDetails.videos)
+        {
+            if (v.id == videoSearchValue)
+            {
+                videoLevel = MudBlazor.Severity.Info;
+                videoMessage = "Video already added to table";
+                _navigationManager.NavigateTo($"/lendingdetails/{id}");
+                return;
+            }
+        }
+        video = _lendingService.GetVideo(videoSearchValue);
+        if (video == null)
+        {
+            videoLevel = MudBlazor.Severity.Error;
+            videoMessage = "Video does not exist";
+        }
+        else
+        {
+            videoLevel = MudBlazor.Severity.Success;
+            videoMessage = "Video added to table";
+            lendingDetails.videos.Add(video);
+            _lendingService.AddVideo(id, video.id);
+            _navigationManager.NavigateTo($"/lendingdetails/{id}");
+        }
+    }
+}

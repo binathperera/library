@@ -1,0 +1,109 @@
+﻿@page "/video/{id}"
+@inject AtlanticVideoLibrary1.Data.IVideoService VideoService;
+@inject NavigationManager NavigationManager;
+<h3>Video</h3>
+
+@try
+{
+    <EditForm Model="@video" Context="formContext">
+        <div>
+            <label>Id</label>
+            <InputText @bind-Value="@video.id" id="id" class="form-control" name="id" readonly />
+        </div>
+        <div>
+            <label>Name</label>
+            <InputText @bind-Value="@video.name" id="name" class="form-control" name="name" />
+        </div>
+        <div>
+            <label>Author</label>
+            <InputText @bind-Value="@video.author" id="author" class="form-control" name="author" />
+        </div>
+        <div>
+            <MudDatePicker Label="Date Of Creation" @bind-Date="@date" />
+        </div>
+        <br />
+        <button type="submit" class="btn btn-primary" @onclick="@(() => Update())">Update</button>
+        <button type="submit" class="btn btn-primary" @onclick="@(() => Delete())">Delete</button>
+        <button type="submit" class="btn btn-primary" @onclick="@(() => Back())">Back to all Videos</button>
+    </EditForm>
+    <MudAlert Severity="@level">@message</MudAlert>
+}
+catch (Exception e)
+{
+    Console.WriteLine(e); //
+}
+@code {
+    [Parameter]
+    public string id { get; set; }
+
+    private MudBlazor.Severity level { get; set; } = Severity.Normal;
+    private string message { get; set; } = "";
+    private DateTime? date = DateTime.Today;
+    private Data.Video video = new Data.Video();
+
+    protected override void OnInitialized()
+    {
+        video = VideoService.GetVideo(id);
+        date = DateTime.Parse(video.dateOfCreation);
+    }
+    public void Update()
+    {
+        video.dateOfCreation = date.ToString();
+        if (id != video.id)
+        {
+            bool status = VideoService.Delete(id);
+            if (status)
+            {
+                status = VideoService.Add(video);
+                if (status)
+                {
+                    level = Severity.Success;
+                    message = "Successfully Updated Video Details";
+                }
+                else
+                {
+                    level = Severity.Error;
+                    message = "Failed to Update Video Details";
+                }
+            }
+            else
+            {
+                level = Severity.Error;
+                message = "Failed to Update Video Details";
+            }
+        }
+        else
+        {
+            bool status = VideoService.Update(video);
+            if (status)
+            {
+                level = Severity.Success;
+                message = "Successfully Updated Vidoe Details";
+            }
+            else
+            {
+                level = Severity.Error;
+                message = "Failed to Update Video Details";
+            }
+        }
+    }
+    public void Delete()
+    {
+        bool status = VideoService.Delete(id);
+        if (status)
+        {
+            level = Severity.Success;
+            message = "Successfully Removed Video Details";
+        }
+        else
+        {
+            level = Severity.Error;
+            message = "Failed to Delete Video ";
+        }
+
+    }
+    public void Back()
+    {
+        NavigationManager.NavigateTo("/videos");
+    }
+}
