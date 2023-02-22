@@ -97,12 +97,12 @@ Select edit in the table view and then select 'Videos in this lending'
 Here you can add new videos, update existing ones and also toggle the 
 return status of a certain book in that lending.
 
-**Search for Lending details**
+* **Search for Lending details**
 
 Use the search bar to search for a lending
 ![Lending page add](ReadmeResources/LendingPageSearch.JPG)
 
-**Delete Lending details**
+* **Delete Lending details**
 
 In the table view select edit.
 ![Lending page add](ReadmeResources/LendingPageDelete.JPG)
