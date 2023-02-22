@@ -1,5 +1,6 @@
 ﻿using AtlanticVideoLibrary1.Pages;
 using Microsoft.Data.SqlClient;
+using System;
 using System.Data;
 
 namespace AtlanticVideoLibrary1.Data
@@ -14,36 +15,37 @@ namespace AtlanticVideoLibrary1.Data
 
             try
             {
-                Guid id = Guid.NewGuid();
-                String sql = $"Insert into lending(id,memberId,borrowedDate,returnDate) Values ('{id}', {l.memberId}, '{l.borrowedDate}', '{l.returnDate}')";
-                using (SqlCommand command = new SqlCommand(sql, connection))
-                {
-                    if (command.ExecuteNonQuery() > 0)
-                    {
-                        command.Dispose();
-                        foreach (Video video in l.details.videos)
-                        {
-                            String sql2 = $"Insert into lendingDetails(lendingId,videoId) Values ('{id}', '{video.id}')";
-                            using (SqlCommand command2 = new SqlCommand(sql2, connection))
-                            {
-                                if (command2.ExecuteNonQuery() <= 0)
-                                {
-                                    Delete(l.id);
-                                    return false;
 
-                                }
-                            }
-                            String sql3 = $"Update video set lendingId='{id}' where id='{video.id}'";
-                            using (SqlCommand command2 = new SqlCommand(sql3, connection))
-                            {
-                                if (command2.ExecuteNonQuery() <= 0) return false;
-                            }
-                        }
-                        return true;
+                String spName = "Insert_Lending"; /*
+                                                   This sp executes a transaction which will carry out 3 queries
+                                                    1)Insert a record to the Lending table
+                                                    2)Insert a record for each video in the lending details table
+                                                    3)Update video records in the video table
+                                                    Will return the generated GUID if transaction completes successfully and NULL if it failed
+                                                  */ 
+                using (SqlCommand command = new SqlCommand(spName, connection))
+                {
+                    command.CommandText = spName;
+                    command.CommandType = CommandType.StoredProcedure;
+                    command.Parameters.Add("@id", SqlDbType.UniqueIdentifier).Direction = ParameterDirection.Output;
+                    command.Parameters.AddWithValue("@memberId", l.memberId);
+                    command.Parameters.AddWithValue("@borrowedDate", DateTime.Parse(l.borrowedDate));
+                    command.Parameters.AddWithValue("@returnDate", DateTime.Parse(l.returnDate));
+                    DataTable dt = new DataTable();
+                    dt.Columns.Add("videoId", typeof(string));
+                    foreach (Video video in l.details.videos)
+                    {
+                        dt.Rows.Add(video.id);
+                    }
+                    command.Parameters.AddWithValue("@videoList", dt);
+                    command.ExecuteNonQuery();
+                    if (command.Parameters["@id"].Value == null)
+                    {
+                        return false;
                     }
                     else
                     {
-                        return false;
+                        return true;
                     }
                 }
             }
@@ -59,54 +61,35 @@ namespace AtlanticVideoLibrary1.Data
             SqlConnection connection = getConnection();
             try
             {
-                bool stat1, stat2;
-                String sql1 = $"Delete from lendingdetails where lendingId='{id}'";
-                using (SqlCommand command = new SqlCommand(sql1, connection))
+                String spName = "Delete_Lending";
+                using (SqlCommand command = new SqlCommand(spName, connection))
                 {
-                    stat1 = command.ExecuteNonQuery() >= 0;
+                    command.CommandType = CommandType.StoredProcedure;
+                    command.Parameters.AddWithValue("@id", id);
+                    SqlParameter returnParameter = command.Parameters.Add("RetVal", SqlDbType.Int);
+                    returnParameter.Direction = ParameterDirection.ReturnValue;
+                    command.ExecuteNonQuery();
+
+                    int retVal = (int)returnParameter.Value;
+                    if (retVal == 0){
+                        return true;
+                    }
+                    else
+                    {
+                        return false;
+                    }
                 }
-                String sql2 = $"Delete from lending where id='{id}'";
-                using (SqlCommand command = new SqlCommand(sql2, connection))
-                {
-                    stat2 = command.ExecuteNonQuery() > 0;
-                }
-                return stat1 && stat2;
             }
             catch (Exception e)
             {
-                Console.WriteLine(e.Message);
+                Console.WriteLine(e);
                 return false;
             }
         }
 
         public Lending GetLending(string id)
         {
-            Lending lending = new Lending();
-            SqlConnection connection = getConnection();
-            try
-            {
-                String sql = $"Select * from lending where id='{id}'";
-                using (SqlCommand command = new SqlCommand(sql, connection))
-                {
-                    using (SqlDataReader reader = command.ExecuteReader())
-                    {
-                        lending.id = id;
-                        while (reader.Read())
-                        {
-                            lending.memberId = "" + reader.GetDecimal(1);
-                            lending.borrowedDate = ("" + reader.GetDateTime(2)).Substring(0, 9);
-                            lending.returnDate = ("" + reader.GetDateTime(3)).Substring(0, 9);
-                        }
-
-                    }
-                }
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e.Message);
-            }
-            lending.details = GetLendingDetails(id);
-            return lending;
+            return lendings.SingleOrDefault(x => x.id == id);
         }
 
         public LendingDetails GetLendingDetails(string id)
@@ -115,9 +98,11 @@ namespace AtlanticVideoLibrary1.Data
             LendingDetails lending = new LendingDetails();
             try
             {
-                String sql = $"Select d.lendingId,videoId,name,dateOfCreation,author from lendingDetails  d left join video v on d.videoId=v.id where d.lendingId='{id}'";
+                String sql = $"Get_Lending_Details";
                 using (SqlCommand command = new SqlCommand(sql, connection))
                 {
+                    command.CommandType = CommandType.StoredProcedure;
+                    command.Parameters.AddWithValue("@id", id);
                     using (SqlDataReader reader = command.ExecuteReader())
                     {
                         lending.id = id;
@@ -143,12 +128,13 @@ namespace AtlanticVideoLibrary1.Data
         }
         public bool IsMemberExist(String id)
         {
-            if (id == "") id = "0";
             SqlConnection connection = getConnection();
-            String sql = $"Select count(*) from member where id ={id}";
+            String spName = "Check_If_Member_Exists";
             bool stat;
-            using (SqlCommand command = new SqlCommand(sql, connection))
+            using (SqlCommand command = new SqlCommand(spName, connection))
             {
+                command.CommandType = CommandType.StoredProcedure;
+                command.Parameters.AddWithValue("@id", id);
                 stat = ((int)command.ExecuteScalar()) == 1;
             }
             return stat;
@@ -159,9 +145,10 @@ namespace AtlanticVideoLibrary1.Data
             SqlConnection connection = getConnection();
             try
             {
-                String sql = "Select * from lending";
-                using (SqlCommand command = new SqlCommand(sql, connection))
+                String spName = "Get_All_Lendings";
+                using (SqlCommand command = new SqlCommand(spName, connection))
                 {
+                    command.CommandType= CommandType.StoredProcedure;   
                     using (SqlDataReader reader = command.ExecuteReader())
                     {
                         while (reader.Read())
@@ -193,10 +180,11 @@ namespace AtlanticVideoLibrary1.Data
             SqlConnection connection = getConnection();
             try
             {
-                String sql = $"Select * from lending where id like '%{s}%' or memberId like '%{s}%'" +
-                    $" or borrowedDate like '%{s}%' or returnDate like '%{s}%'";
-                using (SqlCommand command = new SqlCommand(sql, connection))
+                String spName = "Search_Lendings";
+                using (SqlCommand command = new SqlCommand(spName, connection))
                 {
+                    command.CommandType = CommandType.StoredProcedure;
+                    command.Parameters.AddWithValue("@s", s);
                     using (SqlDataReader reader = command.ExecuteReader())
                     {
                         while (reader.Read())
@@ -224,14 +212,19 @@ namespace AtlanticVideoLibrary1.Data
                 SqlConnection connection = getConnection();
                 try
                 {
-                    bool result1;
-                    String sql1 = $"UPDATE lending SET memberId = {l.memberId}, borrowedDate = '{l.borrowedDate}', returnDate='{l.returnDate}' WHERE id='{l.id}'";
-                    using (SqlCommand command = new SqlCommand(sql1, connection))
+                    bool result;
+                    String spName = $"Update_Lending";
+                    using (SqlCommand command = new SqlCommand(spName, connection))
                     {
-                        result1 = command.ExecuteNonQuery() > 0;
+                        command.CommandType = CommandType.StoredProcedure;
+                        command.Parameters.AddWithValue("@id", l.id);
+                        command.Parameters.AddWithValue("@memberId", l.memberId);
+                        command.Parameters.AddWithValue("@borrowedDate", DateTime.Parse(l.borrowedDate));
+                        command.Parameters.AddWithValue("@returnDate", DateTime.Parse(l.returnDate));
+                        result = command.ExecuteNonQuery() > 0;
                     }
 
-                    return result1;
+                    return result;
                 }
                 catch (Exception e)
                 {
@@ -254,9 +247,11 @@ namespace AtlanticVideoLibrary1.Data
         public Data.Video GetVideo(String id)
         {
             Video video = new Video();
-            String sql = $"Select * from video where id='{id}'";
-            using (SqlCommand command = new SqlCommand(sql, connection))
+            String spName = "Get_Video";
+            using (SqlCommand command = new SqlCommand(spName, connection))
             {
+                command.CommandType = CommandType.StoredProcedure;
+                command.Parameters.AddWithValue("@id", id);
                 using (SqlDataReader reader = command.ExecuteReader())
                 {
                     bool hasRows = reader.HasRows;
@@ -288,15 +283,13 @@ namespace AtlanticVideoLibrary1.Data
             bool returnVal;
             try
             {
-                String sql = $"Insert into lendingDetails(lendingId,videoId) Values ('{lendingId}', '{videoId}')";
-                using (SqlCommand command = new SqlCommand(sql, connection))
+                String spName = "Add_Video_To_Lending";
+                using (SqlCommand command = new SqlCommand(spName, connection))
                 {
-                    command.ExecuteNonQuery();
-                }
-                sql = $"Update video set lendingId='{lendingId}' where id='{videoId}'";
-                using (SqlCommand command = new SqlCommand(sql, connection))
-                {
-                    returnVal= command.ExecuteNonQuery() > 0;
+                    command.CommandType = CommandType.StoredProcedure;
+                    command.Parameters.AddWithValue("@lendingId", lendingId);
+                    command.Parameters.AddWithValue("@videoId", videoId);
+                    returnVal = ((int)command.ExecuteScalar())==0;
                 }
                 return returnVal;
             }
@@ -313,16 +306,20 @@ namespace AtlanticVideoLibrary1.Data
             bool returnVal;
             try
             {
-                String sql = $"Delete from lendingDetails where lendingId='{lendingId}' and videoId='{videoId}'";
-                using (SqlCommand command = new SqlCommand(sql, connection))
+                String spName= "Delete_Video_From_Lending";
+                using (SqlCommand command = new SqlCommand(spName, connection))
                 {
+                    command.CommandType = CommandType.StoredProcedure;
+                    command.Parameters.AddWithValue("@lendingId", lendingId);
+                    command.Parameters.AddWithValue("@videoId", videoId);
+                    SqlParameter returnParameter = command.Parameters.Add("RetVal", SqlDbType.Int);
+                    returnParameter.Direction = ParameterDirection.ReturnValue;
                     command.ExecuteNonQuery();
+
+                    int retVal = (int)returnParameter.Value;
+                    returnVal = (retVal == 0);
                 }
-                sql = $"Update video set lendingId=null where id='{videoId}'";
-                using (SqlCommand command = new SqlCommand(sql, connection))
-                {
-                    returnVal= command.ExecuteNonQuery() > 0;
-                }
+                
                 return returnVal;
             }
             catch (Exception e)
@@ -338,9 +335,27 @@ namespace AtlanticVideoLibrary1.Data
                 int returnstat;
                 if (stat)
                 {
-                    String sql = $"Update video set lendingId=null where id='{videoId}'";
-                    using (SqlCommand command = new SqlCommand(sql, connection))
+                    String existingId = "";
+                    String spName = "Get_Video_Lending_Id";
+                    using (SqlCommand command = new SqlCommand(spName, connection))
                     {
+                        command.CommandType = CommandType.StoredProcedure;
+                        command.Parameters.AddWithValue("@videoId", videoId);
+                        using (SqlDataReader reader = command.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+                                bool isnull = reader.IsDBNull(0);
+                                if (!isnull) { existingId = reader.GetValue(0).ToString(); }
+                                if (existingId != lendingId) { reader.Close(); return 0; }
+                            }
+                        }
+                    }
+                    spName = "Mark_As_Returned";
+                    using (SqlCommand command = new SqlCommand(spName, connection))
+                    {
+                        command.CommandType = CommandType.StoredProcedure;
+                        command.Parameters.AddWithValue("@videoId", videoId);
                         command.ExecuteNonQuery();
                         returnstat = 0;
                     }
@@ -349,29 +364,39 @@ namespace AtlanticVideoLibrary1.Data
                 else
                 {
                     bool isnull=false;
-                    String sql = $"Select lendingId from video where id='{videoId}'";
-                    using (SqlCommand command = new SqlCommand(sql, connection))
+                    String existingId="";
+                    String spName1 = "Get_Video_Lending_Id";
+                    using (SqlCommand command = new SqlCommand(spName1, connection))
                     {
+                        command.CommandType = CommandType.StoredProcedure;
+                        command.Parameters.AddWithValue("@videoId", videoId);
                         using (SqlDataReader reader = command.ExecuteReader())
                         {
                             while (reader.Read())
                             {
                                 isnull=reader.IsDBNull(0);
+                                if(!isnull)existingId= reader.GetValue(0).ToString();
                             }
                         }
                     }
                     if (isnull)
                     {
-                        String sql2 = $"Update video set lendingId='{lendingId}' where id='{videoId}'";
-                        using (SqlCommand command2 = new SqlCommand(sql2, connection))
+                        String spName2 = "Mark_Video_Borrowed";
+                        using (SqlCommand command = new SqlCommand(spName2, connection))
                         {
-                            command2.ExecuteNonQuery();
+                            command.CommandType = CommandType.StoredProcedure;
+                            command.Parameters.AddWithValue("@lendingId", lendingId);
+                            command.Parameters.AddWithValue("@videoId", videoId);
+                            command.ExecuteNonQuery();
                             returnstat = 0;
                         }
                     }
-                    else
+                    else if (existingId == lendingId)
                     {
                         returnstat = 2;
+                    }
+                    else{
+                        returnstat = 3;
                     }
                 }
                 return returnstat;
@@ -385,9 +410,11 @@ namespace AtlanticVideoLibrary1.Data
         public bool GetReturnStatus(String lendingId, String videoId)
         {
             bool stat=false;
-            String sql = $"Select lendingId from video where id='{videoId}'";
+            String sql = "Get_Video_Lending_Id";
             using (SqlCommand command = new SqlCommand(sql, connection))
             {
+                command.CommandType = CommandType.StoredProcedure;
+                command.Parameters.AddWithValue("@videoId", videoId);
                 using (SqlDataReader reader = command.ExecuteReader())
                 {
                     while (reader.Read())

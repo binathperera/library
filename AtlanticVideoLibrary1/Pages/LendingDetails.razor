@@ -66,7 +66,7 @@
         {
             stat=_lendingService.SetReturnStatus(id,v.id,false);
         }
-        if (stat == 0)
+        if (stat == 0 ||stat == 2)
         {
             level = MudBlazor.Severity.Success;
             message = "Successfully updated";
@@ -77,7 +77,7 @@
             level = MudBlazor.Severity.Error;
             message = "Some system error";
         }
-        else if (stat == 2)
+        else if (stat == 3)
         {
             level = MudBlazor.Severity.Error;
             message = "Video borrowed by someone else";
@@ -130,6 +130,10 @@
         {
             videoLevel = MudBlazor.Severity.Error;
             videoMessage = "Video does not exist";
+        }else if(video.lendingId != null)
+        {
+                videoLevel = MudBlazor.Severity.Error;
+                videoMessage = "Video already borrowed. Lending id "+video.lendingId;
         }
         else
         {

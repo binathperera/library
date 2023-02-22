@@ -1,5 +1,7 @@
 ﻿using Microsoft.Data.SqlClient;
 using System.ComponentModel.Design.Serialization;
+using System.Data;
+using System.Xml.Linq;
 
 namespace AtlanticVideoLibrary1.Data
 {
@@ -13,9 +15,17 @@ namespace AtlanticVideoLibrary1.Data
             SqlConnection connection = getConnection();
             try
             {
-                String sql = $"Insert into member(id,name,address,mobile,registrationDate) Values ({m.id}, '{m.name}', '{m.address}', {m.contact}, '{m.dateOfRegistration}')";
-                using (SqlCommand command = new SqlCommand(sql, connection))
+                //String sql = $"Insert into member(id,name,address,mobile,registrationDate) Values ({m.id}, '{m.name}', '{m.address}', {m.contact}, '{m.dateOfRegistration}')";
+                String spName = "Insert_Member";
+                using (SqlCommand command = new SqlCommand(spName, connection))
                 {
+                    command.CommandType = System.Data.CommandType.StoredProcedure;
+                    command.CommandText= spName;    
+                    command.Parameters.AddWithValue("@id", decimal.Parse(m.id));
+                    command.Parameters.AddWithValue("@name", m.name);
+                    command.Parameters.AddWithValue("@address", m.address);
+                    command.Parameters.AddWithValue("@mobile", decimal.Parse(m.contact));
+                    command.Parameters.AddWithValue("@registrationDate", m.dateOfRegistration);
                     return command.ExecuteNonQuery() > 0;
                 }
             }
@@ -31,9 +41,13 @@ namespace AtlanticVideoLibrary1.Data
             SqlConnection connection = getConnection();
             try
             {
-                String sql = "Delete from member where id="+id;
-                using (SqlCommand command = new SqlCommand(sql, connection))
+                //String sql = "Delete from member where id="+id;
+                String spName = "Delete_Member";
+                using (SqlCommand command = new SqlCommand(spName, connection))
                 {
+                    command.CommandType = System.Data.CommandType.StoredProcedure;
+                    command.CommandText = spName;
+                    command.Parameters.AddWithValue("@id",id);
                     return command.ExecuteNonQuery() > 0;                  
                 }
             }
@@ -55,8 +69,8 @@ namespace AtlanticVideoLibrary1.Data
             SqlConnection connection = getConnection();
             try
             {    
-                String sql = "Select * from member";
-                using (SqlCommand command = new SqlCommand(sql, connection)) {
+                String spName = "Get_All_Members";
+                using (SqlCommand command = new SqlCommand(spName, connection)) {
                     using (SqlDataReader reader = command.ExecuteReader())
                     {
                         while (reader.Read())
@@ -87,9 +101,14 @@ namespace AtlanticVideoLibrary1.Data
             SqlConnection connection = getConnection();
             try
             {
-                String sql = $"Select * from member where id like '%{s}%' or name like '%{s}%' or address like '%{s}%' or mobile like '%{s}%' or registrationDate like '%{s}%'";
-                using (SqlCommand command = new SqlCommand(sql, connection))
+                //String sql = $"Select * from member where id like '%{s}%' or name like '%{s}%' or address like '%{s}%' or mobile like '%{s}%' or registrationDate like '%{s}%'";
+                String spName = "Search_Members";
+                using (SqlCommand command = new SqlCommand(spName, connection))
                 {
+                    command.CommandText= spName;
+                    command.CommandType = CommandType.StoredProcedure;
+                    command.Parameters.AddWithValue("@val", s);
+                    
                     using (SqlDataReader reader = command.ExecuteReader())
                     {
                         while (reader.Read())
@@ -116,9 +135,17 @@ namespace AtlanticVideoLibrary1.Data
             SqlConnection connection = getConnection();
             try
             {
-                String sql = $"UPDATE member SET name = '{m.name}', address = '{m.address}', mobile='{m.contact}', registrationDate='{m.dateOfRegistration}' WHERE id='{m.id}'";
-                using (SqlCommand command = new SqlCommand(sql, connection))
+                //String sql = $"UPDATE member SET name = '{m.name}', address = '{m.address}', mobile='{m.contact}', registrationDate='{m.dateOfRegistration}' WHERE id='{m.id}'";
+                String spName = "Update_Member";
+                using (SqlCommand command = new SqlCommand(spName, connection))
                 {
+                    command.CommandType = System.Data.CommandType.StoredProcedure;
+                    command.CommandText = spName;
+                    command.Parameters.AddWithValue("@id", decimal.Parse(m.id));
+                    command.Parameters.AddWithValue("@name", m.name);
+                    command.Parameters.AddWithValue("@address", m.address);
+                    command.Parameters.AddWithValue("@mobile", decimal.Parse(m.contact));
+                    command.Parameters.AddWithValue("@registrationDate", m.dateOfRegistration);
                     return command.ExecuteNonQuery()>0;
                 }
             }
@@ -149,10 +176,14 @@ namespace AtlanticVideoLibrary1.Data
                     var random = new Random();
                     for (int i = 0; i < 12; i++)
                         id = String.Concat(id, random.Next(10).ToString());
-                    String sql = $"Select count(*) from member where id ='{id}'";
+                    //String sql = $"Select count(*) from member where id ='{id}'";
+                    String spName = "Check_For_Member_ID";
                     bool stat;
-                    using (SqlCommand command = new SqlCommand(sql, connection))
+                    using (SqlCommand command = new SqlCommand(spName, connection))
                     {
+                        command.CommandType = System.Data.CommandType.StoredProcedure;
+                        command.CommandText = spName;
+                        command.Parameters.AddWithValue("@id", decimal.Parse(id));
                         stat = ((int)command.ExecuteScalar()) == 0;
                     }
                     if (stat) break;

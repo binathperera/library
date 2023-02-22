@@ -38,7 +38,7 @@
 @code {
     [Parameter]
     public string id{ get; set; }
-    private int contact = 0;
+    private decimal contact = 0;
     private DateTime? date = DateTime.Today;
     private MudBlazor.Severity level { get; set; } = Severity.Normal;
     private string message { get; set; } = "";
@@ -48,7 +48,7 @@
     protected override void OnInitialized()
     {
         member=MemberService.GetMember(id);
-        contact = int.Parse(member.contact);
+        contact = decimal.Parse(member.contact);
         date = DateTime.Parse(member.dateOfRegistration);
     }
     public void Update(){
