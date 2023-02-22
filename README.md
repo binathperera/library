@@ -112,13 +112,13 @@ The edit form will be loaded. The option to delete will be shown.
 
 ## Database Documentation
 
-* **ER Diagram**
+### ER Diagram
 ![ER Diagram](ReadmeResources/ERDiagram.jpg)
 
-* **Tables**
+### Tables
 ![Table names](ReadmeResources/Tables.JPG)
 
-* **Stored Procedures**
+### Stored Procedures**
 ![Stored Procedure names](ReadmeResources/StoredProcedures.JPG)
 
 ## Installation Instructions
