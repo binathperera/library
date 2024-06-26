@@ -121,7 +121,7 @@ The edit form will be loaded. The option to delete will be shown.
 ### Stored Procedures**
 ![Stored Procedure names](ReadmeResources/StoredProcedures.JPG)
 
-## Installation Instructions
+## Instructions to Run the Application
 
 1. Restore database backup using the backup file (AtlanticVideoLibrary.bak) . This can be done using the SQL Server Management Studio. 
 2. Open the solution using Visual Studio Code
